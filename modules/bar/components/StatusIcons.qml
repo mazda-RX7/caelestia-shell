@@ -5,6 +5,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Bluetooth
 import Quickshell.Services.UPower
+import Quickshell.Services.SystemTray
 import Caelestia.Config
 import qs.components
 import qs.services
@@ -21,7 +22,7 @@ StyledRect {
 
     clip: true
     implicitWidth: Tokens.sizes.bar.innerWidth
-    implicitHeight: iconColumn.implicitHeight + Tokens.padding.normal * 2 - (Config.bar.status.showLockStatus && !Hypr.capsLock && !Hypr.numLock ? iconColumn.spacing : 0)
+    implicitHeight: iconColumn.implicitHeight + Tokens.padding.normal * 2
 
     ColumnLayout {
         id: iconColumn
@@ -31,7 +32,16 @@ StyledRect {
         anchors.bottom: parent.bottom
         anchors.bottomMargin: Tokens.padding.normal
 
-        spacing: Tokens.spacing.smaller / 2
+        spacing: 2
+
+        // Tray icons merged into status container
+        Repeater {
+            model: ScriptModel {
+                values: SystemTray.items.values.filter(i => !GlobalConfig.bar.tray.hiddenIcons.includes(i.id))
+            }
+
+            TrayItem {}
+        }
 
         // Lock keys status
         WrappedLoader {
@@ -39,7 +49,7 @@ StyledRect {
             active: Config.bar.status.showLockStatus
 
             sourceComponent: ColumnLayout {
-                spacing: 0
+                spacing: 2
 
                 Item {
                     implicitWidth: capslockIcon.implicitWidth

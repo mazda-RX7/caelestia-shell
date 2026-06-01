@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Layouts
 import Quickshell.Services.SystemTray
 import Caelestia.Config
 import qs.components.effects
@@ -11,6 +12,10 @@ MouseArea {
     id: root
 
     required property SystemTrayItem modelData
+    required property int index
+    readonly property string name: `traymenu${index}`
+
+    Layout.alignment: Qt.AlignHCenter
 
     acceptedButtons: Qt.LeftButton | Qt.RightButton
     implicitWidth: Tokens.font.size.small * 2
@@ -27,6 +32,7 @@ MouseArea {
         id: icon
 
         anchors.fill: parent
+        anchors.margins: 1
         source: Icons.getTrayIcon(root.modelData.id, root.modelData.icon)
         colour: Colours.palette.m3secondary
         layer.enabled: Config.bar.tray.recolour
