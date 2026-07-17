@@ -1554,6 +1554,16 @@ Singleton {
         }
     }
 
+
+    Timer {
+        id: refreshTimer
+
+        interval: 30000
+        running: true
+        repeat: true
+        onTriggered: root.getNetworks(() => {})
+    }
+
     Process {
         id: dataUsageProc
 

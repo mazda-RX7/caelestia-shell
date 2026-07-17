@@ -24,6 +24,11 @@ Singleton {
     readonly property M3Palette preview: M3Palette {}
     readonly property Transparency transparency: Transparency {}
     readonly property alias wallLuminance: analyser.luminance
+    // Snapshot captured at scheme load time; used in alterColour() instead of the
+    // live alias so that ImageAnalyser completing asynchronously does not trigger a
+    // second wave of M3TPalette color animations while the first wave is still
+    // running (which causes QQuickPropertyChanges::actions() SEGV).
+    property real snapshotLuminance: 0
 
     property bool cooldownPending
     property real lastBaseTransparency
@@ -37,7 +42,7 @@ Singleton {
     function alterColour(c: color, a: real, layer: int): color {
         const luminance = getLuminance(c);
 
-        const offset = (!light || layer == 1 ? 1 : -layer / 2) * (light ? 0.2 : 0.3) * (1 - transparency.base) * (1 + wallLuminance * (light ? (layer == 1 ? 3 : 1) : 2.5));
+        const offset = (!light || layer == 1 ? 1 : -layer / 2) * (light ? 0.2 : 0.3) * (1 - transparency.base) * (1 + snapshotLuminance * (light ? (layer == 1 ? 3 : 1) : 2.5));
         const scale = (luminance + offset) / luminance;
         const r = Math.max(0, Math.min(1, c.r * scale));
         const g = Math.max(0, Math.min(1, c.g * scale));
@@ -67,6 +72,7 @@ Singleton {
             root.scheme = scheme.name;
             flavour = scheme.flavour;
             currentLight = scheme.mode === "light";
+            snapshotLuminance = analyser.luminance;
         } else {
             previewLight = scheme.mode === "light";
         }
@@ -113,11 +119,29 @@ Singleton {
         target: Hypr
     }
 
+    IpcHandler {
+        function reload(): void {
+            schemeDebounce.restart();
+        }
+        target: "colours"
+    }
+
     FileView {
+        id: schemeView
         path: `${Paths.state}/scheme.json`
         watchChanges: true
-        onFileChanged: reload()
+        onFileChanged: schemeDebounce.restart()
         onLoaded: root.load(text(), false)
+    }
+
+    // Debounce scheme reloads: wallpaper changes write scheme.json multiple times
+    // in rapid succession, each firing onFileChanged. Without debouncing, competing
+    // color-change state animations cause QQuickPropertyChanges::actions() SEGV.
+    // 600ms (was 400ms) to outlast color-change animations before the next reload.
+    Timer {
+        id: schemeDebounce
+        interval: 600
+        onTriggered: schemeView.reload()
     }
 
     ImageAnalyser {
@@ -148,7 +172,7 @@ Singleton {
 
     component Transparency: QtObject {
         readonly property bool enabled: Tokens.transparency.enabled
-        readonly property real base: Math.max(0, Math.min(1, Tokens.transparency.base - (root.light ? 0.1 : 0)))
+        readonly property real base: Math.max(0, Math.min(1, Tokens.transparency.base - (root.light ? 0.3 : 0)))
         readonly property real layers: Math.max(0, Math.min(1, Tokens.transparency.layers))
 
         onEnabledChanged: {
