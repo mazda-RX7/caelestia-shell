@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Services.SystemTray
 import Caelestia.Config
 import qs.components
 import qs.services
@@ -56,6 +57,17 @@ StyledRect {
         anchors.bottomMargin: Tokens.padding.medium
 
         spacing: 0
+
+        // Tray icons merged into status container (cobra)
+        Repeater {
+            model: ScriptModel {
+                values: SystemTray.items.values.filter(i => !GlobalConfig.bar.tray.hiddenIcons.includes(i.id))
+            }
+
+            TrayItem {
+                Layout.bottomMargin: Math.round(root.spacing / 2)
+            }
+        }
 
         Repeater {
             model: ScriptModel {
